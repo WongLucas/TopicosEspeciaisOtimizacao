@@ -182,3 +182,71 @@ def guillotine_packing_bins(W, H, itens):
         itens_restantes = itens_nao_cabem
 
     return bins
+
+def skyline_packing(W, itens):
+    skyline = [(0, 0)]  # Lista de (x, y), ordenada por x, começa na base
+    positions = []
+    altura_total = 0
+
+    for item in itens:
+        w, h = item['w'], item['h']
+        melhor_x = None
+        melhor_y = None
+        menor_y = None
+
+        # Tenta encaixar o item em cada segmento do skyline
+        for i in range(len(skyline)):
+            x_start = skyline[i][0]
+            if x_start + w > W:
+                continue
+
+            # Calcula a altura máxima do skyline no intervalo [x_start, x_start + w)
+            y_max = skyline[i][1]
+            x_end = x_start + w
+            x_next = x_start
+            j = i
+            while j + 1 < len(skyline) and skyline[j + 1][0] < x_end:
+                y_max = max(y_max, skyline[j + 1][1])
+                x_next = skyline[j + 1][0]
+                j += 1
+
+            # Verifica se cabe (não ultrapassa a largura)
+            if x_end <= W:
+                if (menor_y is None) or (y_max < menor_y) or (y_max == menor_y and x_start < melhor_x):
+                    melhor_x = x_start
+                    melhor_y = y_max
+                    menor_y = y_max
+
+        if melhor_x is None:
+            # Não coube em nenhum lugar, sobe para o topo atual
+            melhor_x = 0
+            melhor_y = altura_total
+
+        positions.append((melhor_x, melhor_y))
+        altura_total = max(altura_total, melhor_y + h)
+
+        # Atualiza o skyline
+        x_insert = melhor_x
+        x_end = melhor_x + w
+        new_skyline = []
+        i = 0
+        # Copia pontos antes do novo retângulo
+        while i < len(skyline) and skyline[i][0] < x_insert:
+            new_skyline.append(skyline[i])
+            i += 1
+        # Adiciona o canto esquerdo do novo retângulo
+        if not new_skyline or new_skyline[-1][0] != x_insert:
+            new_skyline.append((x_insert, melhor_y + h))
+        # Pula pontos cobertos pelo novo retângulo
+        while i < len(skyline) and skyline[i][0] < x_end:
+            i += 1
+        # Adiciona o canto direito do novo retângulo
+        if not new_skyline or new_skyline[-1][0] != x_end:
+            new_skyline.append((x_end, melhor_y))
+        # Copia o restante do skyline
+        while i < len(skyline):
+            new_skyline.append(skyline[i])
+            i += 1
+        skyline = new_skyline
+
+    return positions, altura_total

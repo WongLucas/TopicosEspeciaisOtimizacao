@@ -66,10 +66,6 @@ def plot_bottom_left_width_fixed(itens, positions, W, altura_total):
     plt.show()
 
 def plot_guillotine_bins(bins, W, H):
-    """
-    Plota o resultado da heurística de corte guilhotinado para múltiplos bins.
-    bins: lista de bins, cada bin é uma lista de {'item': item, 'pos': (x, y)}
-    """
     import matplotlib.pyplot as plt
     import random
 
