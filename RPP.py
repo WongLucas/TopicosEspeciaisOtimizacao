@@ -256,7 +256,7 @@ def plot_bottom_left_width_fixed(itens, positions, W, altura_total):
     ax.set_title('Bottom-Left Strip Packing (largura fixa)')
     plt.show()
 
-instancia = ler_instancia_ins2d("Mend/c7-p3.ins2D")
+instancia = ler_instancia_ins2d("SPP(Min_Height)/T7e.ins2D")
 largura = 100#instancia['W']
 
 ff_strips = ff_strip_packing_itens(largura, instancia['itens'])
