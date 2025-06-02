@@ -66,23 +66,81 @@ def bf_strip_packing_itens(W, itens):
     return [strip['itens'] for strip in strips]
 
 def bottom_left_packing_itens(W, H, itens):
+    bins = []        # Lista de bins, cada bin é uma lista de (item, posição)
+    itens_restantes = itens.copy()
+
+    while itens_restantes:
+        positions = []
+        ocupados = []
+        pontos_livres = [(0, 0)]
+
+        itens_nao_cabem = []
+
+        for item in itens_restantes:
+            w, h = item['w'], item['h']
+            melhor_ponto = None
+
+            pontos_livres.sort(key=lambda p: (p[1], p[0]))
+
+            for (px, py) in pontos_livres:
+                if px + w > W or py + h > H:
+                    continue
+
+                sobrepoe = False
+                for ox, oy, ow, oh in ocupados:
+                    if not (px + w <= ox or px >= ox + ow or
+                            py + h <= oy or py >= oy + oh):
+                        sobrepoe = True
+                        break
+                if not sobrepoe:
+                    melhor_ponto = (px, py)
+                    break
+
+            if melhor_ponto is None:
+                itens_nao_cabem.append(item)
+                continue  # tenta no próximo bin
+
+            x, y = melhor_ponto
+            positions.append({'item': item, 'pos': (x, y)})
+            ocupados.append((x, y, w, h))
+
+            pontos_livres.remove((x, y))
+            novos_pontos = [
+                (x + w, y),   # direita
+                (x, y + h)    # acima
+            ]
+            for p in novos_pontos:
+                if p not in pontos_livres:
+                    pontos_livres.append(p)
+
+        bins.append(positions)
+        itens_restantes = itens_nao_cabem
+
+    return bins
+
+
+def bottom_left_width_fixed(W, itens):
     positions = []
     ocupados = []
 
-    # Pontos livres iniciais: (0, 0) é o canto inferior esquerdo
+    # Pontos livres iniciais
     pontos_livres = [(0, 0)]
+
+    altura_total = 0
 
     for item in itens:
         w, h = item['w'], item['h']
         melhor_ponto = None
 
-        # Ordena os pontos livres por menor y, depois menor x
+        # Ordena os pontos livres (menor y, depois menor x)
         pontos_livres.sort(key=lambda p: (p[1], p[0]))
 
         for (px, py) in pontos_livres:
-            # Verifica se cabe no bin
-            if px + w > W or py + h > H:
+            # Verifica se cabe na largura
+            if px + w > W:
                 continue
+
+            # Não verifica altura, porque ela é livre (aumenta se necessário)
 
             # Verifica sobreposição
             sobrepoe = False
@@ -96,25 +154,28 @@ def bottom_left_packing_itens(W, H, itens):
                 break
 
         if melhor_ponto is None:
-            raise Exception("Não cabe no bin")
+            # Se não encontrou, abre uma nova linha (em nova altura)
+            nova_altura = altura_total
+            melhor_ponto = (0, nova_altura)
 
         x, y = melhor_ponto
         positions.append((x, y))
         ocupados.append((x, y, w, h))
 
-        # Atualiza os pontos livres
-        pontos_livres.remove((x, y))
-        # Adiciona novos pontos: à direita e acima do retângulo colocado
-        novos_pontos = [
-            (x + w, y),   # ponto à direita
-            (x, y + h)    # ponto acima
-        ]
-        for p in novos_pontos:
-            if p not in pontos_livres:
-                pontos_livres.append(p)
+        # Atualiza altura total, se necessário
+        altura_total = max(altura_total, y + h)
 
-    return positions
+        # Atualiza pontos livres
+        if (x + w, y) not in pontos_livres:
+            pontos_livres.append((x + w, y))
+        if (x, y + h) not in pontos_livres:
+            pontos_livres.append((x, y + h))
 
+        # Remove ponto usado
+        if (x, y) in pontos_livres:
+            pontos_livres.remove((x, y))
+
+    return positions, altura_total
 
 def plot_strips(strips, W):
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -145,7 +206,36 @@ def plot_strips(strips, W):
     #plt.gca().invert_yaxis()
     plt.show()
 
-def plot_bottom_left(itens, positions, W, H):
+def plot_bottom_left_bins(bins, W, H):
+    """
+    Plota o resultado do bottom_left_packing_itens, que retorna uma lista de bins,
+    onde cada bin é uma lista de {'item': item, 'pos': (x, y)}.
+    """
+    for bin_idx, bin_positions in enumerate(bins):
+        fig, ax = plt.subplots(figsize=(10, 6))
+        cores = {}
+        for obj in bin_positions:
+            item = obj['item']
+            x, y = obj['pos']
+            # Cor única por id
+            if item['id'] not in cores:
+                cores[item['id']] = (random.random(), random.random(), random.random())
+            rect = plt.Rectangle((x, y), item['w'], item['h'],
+                                 facecolor=cores[item['id']], edgecolor='black', alpha=0.7)
+            ax.add_patch(rect)
+            ax.text(x + item['w']/2, y + item['h']/2, str(item['id']),
+                    ha='center', va='center', fontsize=8, color='black')
+        ax.set_xlim(0, W)
+        ax.set_ylim(0, H)
+        ax.set_xlabel('Largura')
+        ax.set_ylabel('Altura')
+        ax.set_title(f'Bottom-Left Packing - Bin {bin_idx+1}')
+        plt.show()
+
+def plot_bottom_left_width_fixed(itens, positions, W, altura_total):
+    """
+    Plota o resultado do bottom_left_width_fixed.
+    """
     fig, ax = plt.subplots(figsize=(10, 6))
     cores = {}
 
@@ -160,26 +250,24 @@ def plot_bottom_left(itens, positions, W, H):
                 ha='center', va='center', fontsize=8, color='black')
 
     ax.set_xlim(0, W)
-    ax.set_ylim(0, H)
+    ax.set_ylim(0, altura_total)
     ax.set_xlabel('Largura')
-    ax.set_ylabel('Altura')
-    ax.set_title('Visualização do Bottom-Left Packing')
-    #plt.gca().invert_yaxis()
+    ax.set_ylabel('Altura utilizada')
+    ax.set_title('Bottom-Left Strip Packing (largura fixa)')
     plt.show()
 
-instancia = ler_instancia_ins2d("SPP(Min_Height)/T5a.ins2D")
+instancia = ler_instancia_ins2d("Mend/c7-p3.ins2D")
+largura = 100#instancia['W']
 
-""" ff_strips = ff_strip_packing_itens(instancia['W'], instancia['itens'])
-for idx, strip in enumerate(ff_strips):
-    print(f"Strip {idx+1}: {[item['id'] for item in strip]}")
+ff_strips = ff_strip_packing_itens(largura, instancia['itens'])
+plot_strips(ff_strips, largura)
 
-bf_strips = bf_strip_packing_itens(instancia['W'], instancia['itens'])
-for idx, strip in enumerate(bf_strips):
-    print(f"Strip {idx+1}: {[item['id'] for item in strip]}")
+bf_strips = bf_strip_packing_itens(largura, instancia['itens'])
+plot_strips(bf_strips, largura)
 
-plot_strips(ff_strips, instancia['W'])
-plot_strips(bf_strips, instancia['W'])
- """
+bins = bottom_left_packing_itens(largura, instancia['H'], instancia['itens'])
+plot_bottom_left_bins(bins, largura, instancia['H'])
 
-positions = bottom_left_packing_itens(150, 150, instancia['itens'])
-plot_bottom_left(instancia['itens'], positions, instancia['W'], instancia['H'])
+positions, altura_total = bottom_left_width_fixed(largura, instancia['itens'])
+plot_bottom_left_width_fixed(instancia['itens'], positions, largura, altura_total)
+
