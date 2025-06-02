@@ -1,3 +1,4 @@
+import random
 from rpp_utils import (
     ler_instancia_ins2d,
     ff_strip_packing_itens,
@@ -15,27 +16,28 @@ from rpp_plot import (
 )
 
 instancia = ler_instancia_ins2d("SPP(Min_Height)/T6e.ins2D")
-largura = instancia['W']/1.5
+largura = instancia['W']
 altura = instancia['H']
 
-itens_ordenados = instancia['itens']#sorted(instancia['itens'], key=lambda x: -x['h'])
+itens_desordenados = instancia['itens'].copy()
+random.shuffle(itens_desordenados)
 
 #ff_strips = ff_strip_packing_itens(largura, instancia['itens'])
-ff_strips = ff_strip_packing_itens(largura, itens_ordenados)
+ff_strips = ff_strip_packing_itens(largura, itens_desordenados)
 plot_strips(ff_strips, largura)
 
 #bf_strips = bf_strip_packing_itens(largura, instancia['itens'])
-bf_strips = bf_strip_packing_itens(largura, itens_ordenados)
+bf_strips = bf_strip_packing_itens(largura, itens_desordenados)
 plot_strips(bf_strips, largura)
 
-bins = bottom_left_packing_itens(largura, altura, instancia['itens'])
+bins = bottom_left_packing_itens(largura, altura,itens_desordenados)
 plot_bottom_left_bins(bins, largura, altura)
 
-positions, altura_total = bottom_left_width_fixed(largura, instancia['itens'])
-plot_bottom_left_width_fixed(instancia['itens'], positions, largura, altura_total)
+positions, altura_total = bottom_left_width_fixed(largura, itens_desordenados)
+plot_bottom_left_width_fixed(itens_desordenados, positions, largura, altura_total)
 
-bins_guilhotina = guillotine_packing_bins(largura, altura, itens_ordenados)
+bins_guilhotina = guillotine_packing_bins(largura, altura, itens_desordenados)
 plot_guillotine_bins(bins_guilhotina, largura, altura)
 
-positions, altura_total = skyline_packing(largura, instancia['itens'])
-plot_bottom_left_width_fixed(instancia['itens'], positions, largura, altura_total)
+positions, altura_total = skyline_packing(largura, itens_desordenados)
+plot_bottom_left_width_fixed(itens_desordenados, positions, largura, altura_total)
