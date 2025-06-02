@@ -14,8 +14,8 @@ from rpp_plot import (
 )
 
 instancia = ler_instancia_ins2d("SPP(Min_Height)/T7e.ins2D")
-largura = instancia['W']
-altura = instancia['H']
+largura = instancia['W']/2
+altura = instancia['H']/2
 
 itens_ordenados = instancia['itens']#sorted(instancia['itens'], key=lambda x: -x['h'])
 

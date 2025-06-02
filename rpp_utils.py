@@ -133,20 +133,51 @@ def guillotine_packing_bins(W, H, itens):
         itens_nao_cabem = []
 
         for item in itens_restantes:
-            colocado = False
+            melhor_espaco = None
+            menor_sobra_area = None
+
             for idx, (ex, ey, ew, eh) in enumerate(espacos_livres):
                 if item['w'] <= ew and item['h'] <= eh:
-                    # Coloca o item nesse espaço
-                    bin_positions.append({'item': item, 'pos': (ex, ey)})
-                    colocado = True
-                    # Remove o espaço usado
-                    espacos_livres.pop(idx)
-                    # Adiciona os dois novos espaços gerados pelo corte guilhotinado
-                    espacos_livres.append((ex + item['w'], ey, ew - item['w'], item['h']))  # direita
-                    espacos_livres.append((ex, ey + item['h'], ew, eh - item['h']))         # abaixo
-                    break
-            if not colocado:
+                    sobra_area = (ew * eh) - (item['w'] * item['h'])
+                    if (menor_sobra_area is None) or (sobra_area < menor_sobra_area):
+                        menor_sobra_area = sobra_area
+                        melhor_espaco = (idx, ex, ey, ew, eh)
+
+            if melhor_espaco is not None:
+                idx, ex, ey, ew, eh = melhor_espaco
+                bin_positions.append({'item': item, 'pos': (ex, ey)})
+
+                # Remove espaço utilizado
+                espacos_livres.pop(idx)
+
+                # Calcula sobras para decidir como cortar
+                sobra_direita = ew - item['w']
+                sobra_cima = eh - item['h']
+
+                # Escolhe o corte que maximiza a área dos subespaços
+                if sobra_direita * eh >= ew * sobra_cima:
+                    # Primeiro corta vertical (direita)
+                    if sobra_direita > 0:
+                        espacos_livres.append(
+                            (ex + item['w'], ey, sobra_direita, eh)
+                        )
+                    if sobra_cima > 0:
+                        espacos_livres.append(
+                            (ex, ey + item['h'], item['w'], sobra_cima)
+                        )
+                else:
+                    # Primeiro corta horizontal (acima)
+                    if sobra_cima > 0:
+                        espacos_livres.append(
+                            (ex, ey + item['h'], ew, sobra_cima)
+                        )
+                    if sobra_direita > 0:
+                        espacos_livres.append(
+                            (ex + item['w'], ey, sobra_direita, item['h'])
+                        )
+            else:
                 itens_nao_cabem.append(item)
+
         bins.append(bin_positions)
         itens_restantes = itens_nao_cabem
 
