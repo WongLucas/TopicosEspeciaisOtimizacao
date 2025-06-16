@@ -1,3 +1,6 @@
+import random
+import math
+
 def ler_instancia_ins2d(caminho_arquivo):
     with open(caminho_arquivo, 'r') as f:
         linhas = [linha.strip() for linha in f if linha.strip() and not linha.startswith('#')]
@@ -17,38 +20,113 @@ def ler_instancia_ins2d(caminho_arquivo):
         itens.append(item)
     return {'m': m, 'W': W, 'H': H, 'itens': itens}
 
-def ff_strip_packing_itens(W, itens):
+def ff_strip_packing_itens(W, H, itens):
     strips = []
+    alturas = []
+    area_ocupada = 0
     for item in itens:
         colocado = False
-        for strip in strips:
+        for idx, strip in enumerate(strips):
             largura_usada = sum(i['w'] for i in strip)
-            if largura_usada + item['w'] <= W:
+            if largura_usada + item['w'] <= W and item['h'] <= alturas[idx]:
                 strip.append(item)
+                area_ocupada += item['w'] * item['h']
                 colocado = True
                 break
         if not colocado:
-            strips.append([item])
-    return strips
+            altura_total = sum(alturas) + item['h']
+            if altura_total <= H:
+                strips.append([item])
+                alturas.append(item['h'])
+                area_ocupada += item['w'] * item['h']
+            else:
+                continue
+    area_bin = W * H
+    desperdicio = area_bin - area_ocupada
+    return strips, desperdicio
 
-def bf_strip_packing_itens(W, itens):
+def bf_strip_packing_itens(W, H, itens):
     strips = []
+    alturas = []
+    area_ocupada = 0
     for item in itens:
         melhor_strip = None
         menor_sobra = None
-        for strip in strips:
-            if item['h'] <= strip['altura']:
-                largura_usada = sum(i['w'] for i in strip['itens'])
+        melhor_idx = None
+        for idx, strip in enumerate(strips):
+            if item['h'] <= alturas[idx]:
+                largura_usada = sum(i['w'] for i in strip)
                 sobra = W - (largura_usada + item['w'])
                 if sobra >= 0:
                     if (menor_sobra is None) or (sobra < menor_sobra):
                         menor_sobra = sobra
                         melhor_strip = strip
+                        melhor_idx = idx
         if melhor_strip is not None:
-            melhor_strip['itens'].append(item)
+            melhor_strip.append(item)
+            area_ocupada += item['w'] * item['h']
         else:
-            strips.append({'altura': item['h'], 'itens': [item]})
-    return [strip['itens'] for strip in strips]
+            altura_total = sum(alturas) + item['h']
+            if altura_total <= H:
+                strips.append([item])
+                alturas.append(item['h'])
+                area_ocupada += item['w'] * item['h']
+            else:
+                continue
+    area_bin = W * H
+    desperdicio = area_bin - area_ocupada
+    return strips, desperdicio
+
+
+def simulated_annealing_strip_packing(itens, W, H, packing_func, temp_inicial=1000, temp_final=1, alpha=0.95, max_iter=1, log_file = None):
+    """
+    Aplica Simulated Annealing para minimizar o desperdício no strip packing.
+    - itens: lista de itens (dicionários)
+    - W, H: dimensões do bin
+    - packing_func: função de packing (ff_strip_packing_itens ou bf_strip_packing_itens)
+    - temp_inicial: temperatura inicial
+    - temp_final: temperatura final
+    - alpha: fator de resfriamento
+    - max_iter: número de iterações por temperatura
+    """
+    # Estado inicial: ordem original dos itens
+    estado_atual = itens.copy()
+    melhor_estado = estado_atual.copy()
+    _, desperdicio_atual = packing_func(W, H, estado_atual)
+    melhor_desperdicio = desperdicio_atual
+
+    temp = temp_inicial
+
+    historico = []  # Lista para armazenar (ordem, desperdicio)
+
+    while temp > temp_final:
+        for _ in range(max_iter):
+            vizinho = estado_atual.copy()
+            i, j = random.sample(range(len(vizinho)), 2)
+            vizinho[i], vizinho[j] = vizinho[j], vizinho[i]
+
+            _, desperdicio_vizinho = packing_func(W, H, vizinho)
+            ordem_ids = tuple(item['id'] for item in vizinho)
+            historico.append((ordem_ids, desperdicio_vizinho))
+
+            delta = desperdicio_vizinho - desperdicio_atual
+
+            if delta < 0 or random.random() < math.exp(-delta / temp):
+                estado_atual = vizinho
+                desperdicio_atual = desperdicio_vizinho
+                if desperdicio_atual < melhor_desperdicio:
+                    melhor_estado = estado_atual.copy()
+                    melhor_desperdicio = desperdicio_atual
+
+        temp *= alpha
+
+    if log_file is not None:
+        with open(log_file, 'w') as f:
+            for ordem, desperdicio in historico:
+                f.write(f"{ordem} = {desperdicio}\n")
+
+    melhor_strips, melhor_desperdicio = packing_func(W, H, melhor_estado)
+    return melhor_strips, melhor_desperdicio, historico
 
 def bottom_left_packing_itens(W, H, itens):
     bins = []

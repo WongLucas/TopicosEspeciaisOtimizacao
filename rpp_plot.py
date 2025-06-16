@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import random
 
-def plot_strips(strips, W):
+def plot_strips(strips, W, H):
     fig, ax = plt.subplots(figsize=(10, 6))
     y_offset = 0
     cores = {}
@@ -20,7 +20,7 @@ def plot_strips(strips, W):
             max_h = max(max_h, item['h'])
         y_offset += max_h
     ax.set_xlim(0, W)
-    ax.set_ylim(0, y_offset)
+    ax.set_ylim(0, H)
     ax.set_xlabel('Largura')
     ax.set_ylabel('Altura acumulada')
     ax.set_title('Visualização do 2D Strip Packing')
