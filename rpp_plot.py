@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 import random
 
 def plot_strips(strips, W, H):
@@ -24,6 +25,21 @@ def plot_strips(strips, W, H):
     ax.set_xlabel('Largura')
     ax.set_ylabel('Altura acumulada')
     ax.set_title('Visualização do 2D Strip Packing')
+    plt.show()
+
+def plot_sa_exploration(csv_file):
+    """
+    Plota a evolução do desperdício durante a execução do Simulated Annealing.
+    csv_file: caminho para o arquivo CSV gerado pelo SA (com colunas 'ordem' e 'desperdicio')
+    """
+    df = pd.read_csv(csv_file)
+    plt.figure(figsize=(10, 6))
+    plt.plot(df['desperdicio'], marker='o', linestyle='-', alpha=0.7)
+    plt.xlabel('Iteração')
+    plt.ylabel('Desperdício')
+    plt.title('Exploração do Simulated Annealing')
+    plt.grid(True)
+    plt.tight_layout()
     plt.show()
 
 def plot_bottom_left_bins(bins, W, H):

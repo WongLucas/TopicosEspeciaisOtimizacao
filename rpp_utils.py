@@ -1,5 +1,6 @@
 import random
 import math
+import csv
 
 def ler_instancia_ins2d(caminho_arquivo):
     with open(caminho_arquivo, 'r') as f:
@@ -79,17 +80,6 @@ def bf_strip_packing_itens(W, H, itens):
 
 
 def simulated_annealing_strip_packing(itens, W, H, packing_func, temp_inicial=1000, temp_final=1, alpha=0.95, max_iter=1, log_file = None):
-    """
-    Aplica Simulated Annealing para minimizar o desperdício no strip packing.
-    - itens: lista de itens (dicionários)
-    - W, H: dimensões do bin
-    - packing_func: função de packing (ff_strip_packing_itens ou bf_strip_packing_itens)
-    - temp_inicial: temperatura inicial
-    - temp_final: temperatura final
-    - alpha: fator de resfriamento
-    - max_iter: número de iterações por temperatura
-    """
-    # Estado inicial: ordem original dos itens
     estado_atual = itens.copy()
     melhor_estado = estado_atual.copy()
     _, desperdicio_atual = packing_func(W, H, estado_atual)
@@ -121,9 +111,11 @@ def simulated_annealing_strip_packing(itens, W, H, packing_func, temp_inicial=10
         temp *= alpha
 
     if log_file is not None:
-        with open(log_file, 'w') as f:
+        with open(log_file, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['ordem', 'desperdicio'])
             for ordem, desperdicio in historico:
-                f.write(f"{ordem} = {desperdicio}\n")
+                writer.writerow(['-'.join(map(str, ordem)), desperdicio])
 
     melhor_strips, melhor_desperdicio = packing_func(W, H, melhor_estado)
     return melhor_strips, melhor_desperdicio, historico
